@@ -125,6 +125,17 @@ export async function getPaymentByExternalReference(
   return list[0];
 }
 
+export async function listPayments(params?: {
+  limit?: number;
+  offset?: number;
+}): Promise<any> {
+  const limit = params?.limit ?? 100;
+  const offset = params?.offset ?? 0;
+  return asaasFetch(`/payments?limit=${limit}&offset=${offset}`, {
+    method: "GET",
+  });
+}
+
 // Status do Asaas que significam "pago".
 export const PAID_STATUSES = ["RECEIVED", "CONFIRMED", "RECEIVED_IN_CASH"];
 

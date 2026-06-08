@@ -46,11 +46,14 @@ export async function POST(req: NextRequest) {
 
   const a = data.address;
   const description =
-    `${PRODUCT.collection} - ${PRODUCT.name} | ${totalQty} un (${breakdown}) | ` +
+    `${PRODUCT.collection} - ${PRODUCT.name} | ` +
+    `${totalQty} un (${breakdown}) | ` +
     `Cliente: ${data.name} | ` +
+    `Email: ${data.email} | ` +
+    `Tel: ${data.phone} | ` +
     `Entrega: ${a.street}, ${a.number}` +
     `${a.complement ? " - " + a.complement : ""}, ${a.district}, ` +
-    `${a.city}/${a.state}, CEP ${a.cep} | Tel: ${data.phone}`;
+    `${a.city}/${a.state}, CEP ${a.cep}`;
 
   // Geramos a referência do pedido nós mesmos, para já saber a URL de retorno.
   const ref = `RR-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
