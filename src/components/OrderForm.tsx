@@ -328,7 +328,7 @@ export function OrderForm() {
                         type="button"
                         aria-label={`Diminuir ${size}`}
                         onClick={() => setQty(size, qty - 1)}
-                        className="grid h-8 w-8 place-items-center rounded-lg bg-neutral-100 text-lg font-bold text-neutral-600 transition hover:bg-neutral-200 active:scale-95"
+                        className="grid h-9 w-9 place-items-center rounded-lg bg-neutral-100 text-lg font-bold text-neutral-600 transition hover:bg-neutral-200 active:scale-95"
                       >
                         −
                       </button>
@@ -345,7 +345,7 @@ export function OrderForm() {
                         type="button"
                         aria-label={`Aumentar ${size}`}
                         onClick={() => setQty(size, qty + 1)}
-                        className="grid h-8 w-8 place-items-center rounded-lg bg-brasil-green/10 text-lg font-bold text-brasil-green transition hover:bg-brasil-green/20 active:scale-95"
+                        className="grid h-9 w-9 place-items-center rounded-lg bg-brasil-green/10 text-lg font-bold text-brasil-green transition hover:bg-brasil-green/20 active:scale-95"
                       >
                         +
                       </button>
@@ -359,7 +359,7 @@ export function OrderForm() {
       </fieldset>
 
       {/* Resumo + ação */}
-      <div className="sticky bottom-3 z-10 rounded-2xl border border-neutral-200 bg-white/95 p-4 shadow-xl backdrop-blur">
+      <div className="sticky bottom-3 z-10 rounded-2xl border border-neutral-200 bg-white/95 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-xl backdrop-blur">
         <div className="mb-3 flex items-center justify-between">
           <div>
             <div className="text-sm text-neutral-500">

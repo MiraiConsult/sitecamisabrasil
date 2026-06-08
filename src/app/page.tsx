@@ -1,5 +1,5 @@
 import { OrderForm } from "@/components/OrderForm";
-import { Jersey } from "@/components/Jersey";
+import { ProductGallery } from "@/components/ProductGallery";
 import { RRLogo } from "@/components/RRLogo";
 import { PRODUCT, UNIT_PRICE, STORE } from "@/lib/config";
 import { formatBRL } from "@/lib/format";
@@ -23,8 +23,8 @@ export default function Home() {
         <div className="absolute -left-24 top-1/2 h-96 w-96 -translate-y-1/2 rounded-full bg-brasil-green/30 blur-3xl" />
         <div className="absolute -right-24 top-0 h-96 w-96 rounded-full bg-brasil-yellow/20 blur-3xl" />
 
-        <div className="relative mx-auto grid max-w-6xl items-center gap-8 px-4 py-12 md:grid-cols-2 md:py-20">
-          <div>
+        <div className="relative mx-auto flex max-w-6xl flex-col items-center gap-8 px-4 py-10 md:grid md:grid-cols-2 md:py-20">
+          <div className="order-2 w-full md:order-1">
             <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-brasil-yellow ring-1 ring-white/20">
               ★ {PRODUCT.collection}
             </span>
@@ -66,10 +66,9 @@ export default function Home() {
             </ul>
           </div>
 
-          {/* Camisa */}
-          <div className="relative mx-auto w-full max-w-sm">
-            <div className="absolute inset-0 -z-10 m-auto h-72 w-72 rounded-full bg-brasil-green/40 blur-2xl" />
-            <Jersey className="mx-auto w-full drop-shadow-2xl" />
+          {/* Fotos do produto */}
+          <div className="order-1 w-full max-w-md md:order-2 md:justify-self-end">
+            <ProductGallery />
           </div>
         </div>
       </section>
