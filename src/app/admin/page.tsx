@@ -17,6 +17,8 @@ type Order = {
   email: string;
   telefone: string;
   entrega: string;
+  tipo: string;
+  frete: string;
   quantidade: string;
   tamanhos: string;
   descricao: string;
@@ -203,7 +205,13 @@ export default function AdminPage() {
                       <span className="text-neutral-500">{o.tamanhos}</span>
                     </Td>
                     <Td className="max-w-[260px] text-xs text-neutral-600">
-                      {o.entrega}
+                      {o.tipo === "Retirada" ? (
+                        <span className="font-semibold text-brasil-greenDark">
+                          🏬 Retirada na loja
+                        </span>
+                      ) : (
+                        o.entrega
+                      )}
                     </Td>
                     <Td className="whitespace-nowrap font-bold text-neutral-900">
                       {formatBRL(o.value)}

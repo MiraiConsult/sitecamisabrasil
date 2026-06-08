@@ -1,7 +1,18 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { SIZE_GROUPS, ALL_SIZES, UNIT_PRICE } from "@/lib/config";
+import { useEffect, useMemo, useState } from "react";
+import {
+  SIZE_GROUPS,
+  ALL_SIZES,
+  UNIT_PRICE,
+  PICKUP,
+  PRODUCTION_LABEL,
+  FREE_SHIPPING_FROM,
+  SHIPPING_FEE,
+  computeShipping,
+  isItajaiCep,
+  isOrderingClosed,
+} from "@/lib/config";
 import {
   formatBRL,
   maskCEP,
@@ -11,6 +22,7 @@ import {
 } from "@/lib/format";
 
 type Items = Record<string, number>;
+type Method = "entrega" | "retirada";
 
 const emptyItems: Items = ALL_SIZES.reduce((acc, s) => {
   acc[s] = 0;
@@ -22,6 +34,8 @@ export function OrderForm() {
   const [email, setEmail] = useState("");
   const [cpfCnpj, setCpfCnpj] = useState("");
   const [phone, setPhone] = useState("");
+
+  const [method, setMethod] = useState<Method>("entrega");
 
   const [cep, setCep] = useState("");
   const [street, setStreet] = useState("");
@@ -36,12 +50,30 @@ export function OrderForm() {
   const [cepLoading, setCepLoading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [closed, setClosed] = useState(false);
+
+  useEffect(() => {
+    const tick = () => setClosed(isOrderingClosed());
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, []);
 
   const totalQty = useMemo(
     () => Object.values(items).reduce((a, b) => a + b, 0),
     [items]
   );
-  const totalValue = totalQty * UNIT_PRICE;
+  const subtotal = totalQty * UNIT_PRICE;
+  const shipping = computeShipping(method, subtotal);
+  const total = subtotal + shipping;
+
+  const cepDigits = onlyDigits(cep);
+  const itajaiInvalid =
+    method === "entrega" && cepDigits.length === 8 && !isItajaiCep(cepDigits);
+  const missingForFree =
+    method === "entrega" && subtotal > 0 && subtotal < FREE_SHIPPING_FROM
+      ? FREE_SHIPPING_FROM - subtotal
+      : 0;
 
   function setQty(size: string, value: number) {
     setItems((prev) => ({
@@ -64,7 +96,7 @@ export function OrderForm() {
         if (data.uf) setUf(data.uf);
       }
     } catch {
-      // silencioso — o cliente pode preencher manualmente
+      // silencioso
     } finally {
       setCepLoading(false);
     }
@@ -74,9 +106,17 @@ export function OrderForm() {
     e.preventDefault();
     setError(null);
 
+    if (closed) {
+      setError("As vendas foram encerradas (prazo até 15/06).");
+      return;
+    }
     if (totalQty < 1) {
       setError("Escolha a quantidade de pelo menos 1 tamanho.");
       document.getElementById("tamanhos")?.scrollIntoView({ behavior: "smooth" });
+      return;
+    }
+    if (itajaiInvalid) {
+      setError("No momento só realizamos entregas em Itajaí (SC).");
       return;
     }
 
@@ -90,15 +130,19 @@ export function OrderForm() {
           email,
           cpfCnpj,
           phone,
-          address: {
-            cep,
-            street,
-            number,
-            complement,
-            district,
-            city,
-            state: uf,
-          },
+          deliveryMethod: method,
+          address:
+            method === "entrega"
+              ? {
+                  cep,
+                  street,
+                  number,
+                  complement,
+                  district,
+                  city,
+                  state: uf,
+                }
+              : undefined,
           items,
         }),
       });
@@ -106,7 +150,6 @@ export function OrderForm() {
       if (!res.ok) {
         throw new Error(data.error || "Não foi possível gerar o pagamento.");
       }
-      // Vai para a página do pedido, que mostra o pagamento e confirma sozinha.
       window.location.href = `/pedido/${encodeURIComponent(data.ref)}`;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erro inesperado.");
@@ -161,7 +204,7 @@ export function OrderForm() {
               className="input"
               value={phone}
               onChange={(e) => setPhone(maskPhone(e.target.value))}
-              placeholder="(11) 99999-9999"
+              placeholder="(47) 99999-9999"
               required
               autoComplete="tel"
             />
@@ -183,112 +226,169 @@ export function OrderForm() {
         </div>
       </fieldset>
 
-      {/* Endereço de entrega */}
+      {/* Entrega ou retirada */}
       <fieldset className="space-y-4">
         <legend className="mb-1 text-lg font-extrabold text-neutral-900">
-          2. Endereço de entrega
+          2. Como você quer receber
         </legend>
-        <div className="grid gap-4 sm:grid-cols-3">
-          <div>
-            <label className="label" htmlFor="cep">
-              CEP {cepLoading && <span className="text-brasil-green">buscando…</span>}
-            </label>
-            <input
-              id="cep"
-              inputMode="numeric"
-              className="input"
-              value={cep}
-              onChange={(e) => setCep(maskCEP(e.target.value))}
-              onBlur={(e) => lookupCep(e.target.value)}
-              placeholder="00000-000"
-              required
-              autoComplete="postal-code"
-            />
-          </div>
-          <div className="sm:col-span-2">
-            <label className="label" htmlFor="street">
-              Rua / Logradouro
-            </label>
-            <input
-              id="street"
-              className="input"
-              value={street}
-              onChange={(e) => setStreet(e.target.value)}
-              placeholder="Av. Brasil"
-              required
-              autoComplete="address-line1"
-            />
-          </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <MethodButton
+            active={method === "entrega"}
+            onClick={() => setMethod("entrega")}
+            title="Entrega"
+            subtitle="Somente em Itajaí"
+          />
+          <MethodButton
+            active={method === "retirada"}
+            onClick={() => setMethod("retirada")}
+            title="Retirar na loja"
+            subtitle="Grátis"
+          />
         </div>
-        <div className="grid gap-4 sm:grid-cols-3">
-          <div>
-            <label className="label" htmlFor="number">
-              Número
-            </label>
-            <input
-              id="number"
-              className="input"
-              value={number}
-              onChange={(e) => setNumber(e.target.value)}
-              placeholder="123"
-              required
-            />
+
+        {method === "entrega" ? (
+          <div className="space-y-4">
+            <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm font-medium text-amber-800">
+              📍 Entregamos <strong>somente em Itajaí (SC)</strong>. Frete{" "}
+              {formatBRL(SHIPPING_FEE)} — <strong>grátis</strong> acima de{" "}
+              {formatBRL(FREE_SHIPPING_FROM)}.
+            </p>
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div>
+                <label className="label" htmlFor="cep">
+                  CEP{" "}
+                  {cepLoading && (
+                    <span className="text-brasil-green">buscando…</span>
+                  )}
+                </label>
+                <input
+                  id="cep"
+                  inputMode="numeric"
+                  className="input"
+                  value={cep}
+                  onChange={(e) => setCep(maskCEP(e.target.value))}
+                  onBlur={(e) => lookupCep(e.target.value)}
+                  placeholder="88300-000"
+                  required={method === "entrega"}
+                  autoComplete="postal-code"
+                />
+                {itajaiInvalid && (
+                  <p className="mt-1 text-sm font-semibold text-red-600">
+                    Esse CEP não é de Itajaí. Só entregamos em Itajaí (SC).
+                  </p>
+                )}
+              </div>
+              <div className="sm:col-span-2">
+                <label className="label" htmlFor="street">
+                  Rua / Logradouro
+                </label>
+                <input
+                  id="street"
+                  className="input"
+                  value={street}
+                  onChange={(e) => setStreet(e.target.value)}
+                  placeholder="Rua das Flores"
+                  required={method === "entrega"}
+                  autoComplete="address-line1"
+                />
+              </div>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div>
+                <label className="label" htmlFor="number">
+                  Número
+                </label>
+                <input
+                  id="number"
+                  className="input"
+                  value={number}
+                  onChange={(e) => setNumber(e.target.value)}
+                  placeholder="123"
+                  required={method === "entrega"}
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <label className="label" htmlFor="complement">
+                  Complemento{" "}
+                  <span className="font-normal text-neutral-400">
+                    (opcional)
+                  </span>
+                </label>
+                <input
+                  id="complement"
+                  className="input"
+                  value={complement}
+                  onChange={(e) => setComplement(e.target.value)}
+                  placeholder="Apto, bloco, referência…"
+                />
+              </div>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-6">
+              <div className="sm:col-span-2">
+                <label className="label" htmlFor="district">
+                  Bairro
+                </label>
+                <input
+                  id="district"
+                  className="input"
+                  value={district}
+                  onChange={(e) => setDistrict(e.target.value)}
+                  placeholder="Centro"
+                  required={method === "entrega"}
+                />
+              </div>
+              <div className="sm:col-span-3">
+                <label className="label" htmlFor="city">
+                  Cidade
+                </label>
+                <input
+                  id="city"
+                  className="input"
+                  value={city}
+                  onChange={(e) => setCity(e.target.value)}
+                  placeholder="Itajaí"
+                  required={method === "entrega"}
+                />
+              </div>
+              <div className="sm:col-span-1">
+                <label className="label" htmlFor="uf">
+                  UF
+                </label>
+                <input
+                  id="uf"
+                  className="input uppercase"
+                  value={uf}
+                  maxLength={2}
+                  onChange={(e) => setUf(e.target.value.toUpperCase())}
+                  placeholder="SC"
+                  required={method === "entrega"}
+                />
+              </div>
+            </div>
           </div>
-          <div className="sm:col-span-2">
-            <label className="label" htmlFor="complement">
-              Complemento <span className="font-normal text-neutral-400">(opcional)</span>
-            </label>
-            <input
-              id="complement"
-              className="input"
-              value={complement}
-              onChange={(e) => setComplement(e.target.value)}
-              placeholder="Apto, bloco, referência…"
-            />
+        ) : (
+          <div className="rounded-xl border border-brasil-green/30 bg-brasil-green/5 p-4">
+            <div className="flex items-start gap-3">
+              <span className="text-2xl">🏬</span>
+              <div>
+                <p className="font-bold text-neutral-900">
+                  Retirada na {PICKUP.name}
+                </p>
+                <p className="mt-0.5 text-sm text-neutral-700">
+                  {PICKUP.address}
+                </p>
+                <p className="mt-0.5 text-sm text-neutral-500">
+                  {PICKUP.hours}
+                </p>
+                <p className="mt-2 text-sm font-semibold text-brasil-greenDark">
+                  Sem frete • avisamos no WhatsApp quando estiver pronto para
+                  retirar.
+                </p>
+              </div>
+            </div>
           </div>
-        </div>
-        <div className="grid gap-4 sm:grid-cols-6">
-          <div className="sm:col-span-2">
-            <label className="label" htmlFor="district">
-              Bairro
-            </label>
-            <input
-              id="district"
-              className="input"
-              value={district}
-              onChange={(e) => setDistrict(e.target.value)}
-              placeholder="Centro"
-              required
-            />
-          </div>
-          <div className="sm:col-span-3">
-            <label className="label" htmlFor="city">
-              Cidade
-            </label>
-            <input
-              id="city"
-              className="input"
-              value={city}
-              onChange={(e) => setCity(e.target.value)}
-              placeholder="São Paulo"
-              required
-            />
-          </div>
-          <div className="sm:col-span-1">
-            <label className="label" htmlFor="uf">
-              UF
-            </label>
-            <input
-              id="uf"
-              className="input uppercase"
-              value={uf}
-              maxLength={2}
-              onChange={(e) => setUf(e.target.value.toUpperCase())}
-              placeholder="SP"
-              required
-            />
-          </div>
-        </div>
+        )}
       </fieldset>
 
       {/* Tamanhos */}
@@ -360,22 +460,44 @@ export function OrderForm() {
 
       {/* Resumo + ação */}
       <div className="sticky bottom-3 z-10 rounded-2xl border border-neutral-200 bg-white/95 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-xl backdrop-blur">
-        <div className="mb-3 flex items-center justify-between">
-          <div>
-            <div className="text-sm text-neutral-500">
-              {totalQty} {totalQty === 1 ? "unidade" : "unidades"} ×{" "}
-              {formatBRL(UNIT_PRICE)}
-            </div>
-            <div className="text-2xl font-extrabold text-neutral-900">
-              {formatBRL(totalValue)}
-            </div>
-          </div>
-          <div className="hidden text-right text-xs text-neutral-400 sm:block">
-            Pagamento via Asaas
-            <br />
-            PIX, boleto ou cartão
+        <div className="mb-3 space-y-1">
+          <Row
+            label={`${totalQty} ${totalQty === 1 ? "unidade" : "unidades"} × ${formatBRL(UNIT_PRICE)}`}
+            value={formatBRL(subtotal)}
+          />
+          {method === "entrega" ? (
+            <Row
+              label="Frete (Itajaí)"
+              value={
+                totalQty === 0
+                  ? "—"
+                  : shipping === 0
+                    ? "Grátis 🎉"
+                    : formatBRL(shipping)
+              }
+              valueClass={shipping === 0 && totalQty > 0 ? "text-brasil-green" : ""}
+            />
+          ) : (
+            <Row label="Retirada na loja" value="Grátis" valueClass="text-brasil-green" />
+          )}
+          <div className="flex items-center justify-between border-t border-neutral-100 pt-2">
+            <span className="text-base font-bold text-neutral-900">Total</span>
+            <span className="text-2xl font-extrabold text-neutral-900">
+              {formatBRL(total)}
+            </span>
           </div>
         </div>
+
+        {missingForFree > 0 && (
+          <p className="mb-2 rounded-lg bg-amber-50 px-3 py-1.5 text-center text-xs font-semibold text-amber-800">
+            Faltam {formatBRL(missingForFree)} para o frete grátis!
+          </p>
+        )}
+
+        <p className="mb-3 flex items-center justify-center gap-1.5 text-xs font-medium text-neutral-500">
+          🛠️ Pronto em até <strong>{PRODUCTION_LABEL}</strong> · pagamento via
+          Asaas (PIX, boleto ou cartão)
+        </p>
 
         {error && (
           <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm font-medium text-red-700">
@@ -383,13 +505,22 @@ export function OrderForm() {
           </p>
         )}
 
-        <button type="submit" className="btn-primary w-full" disabled={loading}>
-          {loading ? (
+        <button
+          type="submit"
+          className="btn-primary w-full"
+          disabled={loading || closed || itajaiInvalid}
+        >
+          {closed ? (
+            "Pedidos encerrados"
+          ) : loading ? (
             <>
               <Spinner /> Gerando pagamento…
             </>
           ) : (
-            <>Finalizar e pagar {totalQty > 0 ? `· ${formatBRL(totalValue)}` : ""}</>
+            <>
+              Finalizar e pagar
+              {totalQty > 0 ? ` · ${formatBRL(total)}` : ""}
+            </>
           )}
         </button>
         <p className="mt-2 text-center text-xs text-neutral-400">
@@ -398,6 +529,63 @@ export function OrderForm() {
         </p>
       </div>
     </form>
+  );
+}
+
+function MethodButton({
+  active,
+  onClick,
+  title,
+  subtitle,
+}: {
+  active: boolean;
+  onClick: () => void;
+  title: string;
+  subtitle: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`rounded-xl border-2 p-3 text-left transition ${
+        active
+          ? "border-brasil-green bg-brasil-green/5"
+          : "border-neutral-200 bg-white hover:border-neutral-300"
+      }`}
+    >
+      <div className="flex items-center gap-2">
+        <span
+          className={`grid h-5 w-5 place-items-center rounded-full border-2 ${
+            active ? "border-brasil-green" : "border-neutral-300"
+          }`}
+        >
+          {active && (
+            <span className="h-2.5 w-2.5 rounded-full bg-brasil-green" />
+          )}
+        </span>
+        <span className="font-bold text-neutral-900">{title}</span>
+      </div>
+      <div className="mt-1 pl-7 text-xs text-neutral-500">{subtitle}</div>
+    </button>
+  );
+}
+
+function Row({
+  label,
+  value,
+  valueClass = "",
+}: {
+  label: string;
+  value: string;
+  valueClass?: string;
+}) {
+  return (
+    <div className="flex items-center justify-between text-sm">
+      <span className="text-neutral-500">{label}</span>
+      <span className={`font-semibold text-neutral-700 ${valueClass}`}>
+        {value}
+      </span>
+    </div>
   );
 }
 

@@ -44,6 +44,8 @@ function parseDescription(desc: string) {
     email: find("Email:"),
     telefone: find("Tel:"),
     entrega: find("Entrega:"),
+    tipo: find("Tipo:"),
+    frete: find("Frete:"),
     quantidade,
     tamanhos,
   };

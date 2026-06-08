@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { formatBRL } from "@/lib/format";
 import { RRLogo } from "@/components/RRLogo";
+import { PRODUCTION_LABEL, PICKUP } from "@/lib/config";
 
 type StatusData = {
   status: string;
@@ -10,6 +11,7 @@ type StatusData = {
   value?: number;
   invoiceUrl?: string;
   dueDate?: string;
+  description?: string;
   error?: string;
 };
 
@@ -150,6 +152,7 @@ function Pending({ data }: { data: StatusData | null }) {
 }
 
 function Paid({ data }: { data: StatusData | null }) {
+  const isPickup = (data?.description || "").includes("Retirada");
   return (
     <div>
       <div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-brasil-green/15">
@@ -175,17 +178,42 @@ function Paid({ data }: { data: StatusData | null }) {
         </p>
       )}
       <p className="mx-auto mt-4 max-w-sm text-neutral-600">
-        Seu pedido foi confirmado e será{" "}
-        <span className="font-semibold text-neutral-900">
-          entregue no endereço informado
-        </span>
-        . Obrigado por comprar com a RR Uniformes!
+        {isPickup ? (
+          <>
+            Seu pedido foi confirmado! Assim que ficar pronto, você{" "}
+            <span className="font-semibold text-neutral-900">
+              retira na loja
+            </span>
+            . Obrigado por comprar com a RR Uniformes!
+          </>
+        ) : (
+          <>
+            Seu pedido foi confirmado e será{" "}
+            <span className="font-semibold text-neutral-900">
+              entregue no endereço informado
+            </span>{" "}
+            (Itajaí). Obrigado por comprar com a RR Uniformes!
+          </>
+        )}
       </p>
 
       <div className="mt-6 rounded-xl bg-brasil-green/5 px-4 py-3 text-sm text-brasil-greenDark">
-        Em breve a RR Uniformes entra em contato para combinar os detalhes da
-        entrega.
+        🛠️ Seu pedido fica pronto em até <strong>{PRODUCTION_LABEL}</strong>.
+        Avisaremos quando estiver pronto
+        {isPickup ? " para retirada." : " e a caminho."}
       </div>
+
+      {isPickup && (
+        <div className="mt-3 rounded-xl border border-neutral-200 bg-white px-4 py-3 text-left text-sm text-neutral-700">
+          <div className="font-bold text-neutral-900">
+            Endereço de retirada
+          </div>
+          <div>
+            {PICKUP.name} — {PICKUP.address}
+          </div>
+          <div className="text-neutral-500">{PICKUP.hours}</div>
+        </div>
+      )}
 
       <a
         href="/"

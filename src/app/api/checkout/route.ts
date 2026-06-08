@@ -1,6 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { checkoutSchema } from "@/lib/validation";
-import { UNIT_PRICE, PRODUCT, ALL_SIZES } from "@/lib/config";
+import {
+  UNIT_PRICE,
+  PRODUCT,
+  ALL_SIZES,
+  computeShipping,
+  isOrderingClosed,
+  PRODUCTION_LABEL,
+} from "@/lib/config";
+import { formatBRL } from "@/lib/format";
 import {
   createCustomer,
   createPayment,
@@ -20,14 +28,18 @@ function siteUrl(req: NextRequest): string {
 }
 
 export async function POST(req: NextRequest) {
+  if (isOrderingClosed()) {
+    return NextResponse.json(
+      { error: "As vendas foram encerradas (prazo até 15/06)." },
+      { status: 403 }
+    );
+  }
+
   let raw: unknown;
   try {
     raw = await req.json();
   } catch {
-    return NextResponse.json(
-      { error: "Requisição inválida." },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: "Requisição inválida." }, { status: 400 });
   }
 
   const parsed = checkoutSchema.safeParse(raw);
@@ -38,24 +50,40 @@ export async function POST(req: NextRequest) {
   const data = parsed.data;
 
   const totalQty = Object.values(data.items).reduce((a, b) => a + b, 0);
-  const totalValue = Number((totalQty * UNIT_PRICE).toFixed(2));
+  const subtotal = Number((totalQty * UNIT_PRICE).toFixed(2));
+  const shipping = computeShipping(data.deliveryMethod, subtotal);
+  const totalValue = Number((subtotal + shipping).toFixed(2));
 
   const breakdown = ALL_SIZES.filter((s) => (data.items[s] || 0) > 0)
     .map((s) => `${data.items[s]}x ${s}`)
     .join(", ");
 
+  const isPickup = data.deliveryMethod === "retirada";
   const a = data.address;
-  const description =
-    `${PRODUCT.collection} - ${PRODUCT.name} | ` +
-    `${totalQty} un (${breakdown}) | ` +
-    `Cliente: ${data.name} | ` +
-    `Email: ${data.email} | ` +
-    `Tel: ${data.phone} | ` +
-    `Entrega: ${a.street}, ${a.number}` +
-    `${a.complement ? " - " + a.complement : ""}, ${a.district}, ` +
-    `${a.city}/${a.state}, CEP ${a.cep}`;
+  const freteLabel = isPickup
+    ? "Retirada na loja"
+    : shipping === 0
+      ? "Grátis"
+      : formatBRL(shipping);
 
-  // Geramos a referência do pedido nós mesmos, para já saber a URL de retorno.
+  const descParts = [
+    `${PRODUCT.collection} - ${PRODUCT.name}`,
+    `${totalQty} un (${breakdown})`,
+    `Tipo: ${isPickup ? "Retirada" : "Entrega"}`,
+    `Frete: ${freteLabel}`,
+    `Cliente: ${data.name}`,
+    `Email: ${data.email}`,
+    `Tel: ${data.phone}`,
+  ];
+  if (!isPickup && a) {
+    descParts.push(
+      `Entrega: ${a.street}, ${a.number}` +
+        `${a.complement ? " - " + a.complement : ""}, ${a.district}, ` +
+        `${a.city}/${a.state}, CEP ${a.cep}`
+    );
+  }
+  const description = descParts.join(" | ").slice(0, 500);
+
   const ref = `RR-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 
   try {
@@ -64,11 +92,15 @@ export async function POST(req: NextRequest) {
       email: data.email,
       cpfCnpj: data.cpfCnpj,
       mobilePhone: data.phone,
-      postalCode: a.cep,
-      address: a.street,
-      addressNumber: a.number,
-      complement: a.complement || undefined,
-      province: a.district,
+      ...(isPickup || !a
+        ? {}
+        : {
+            postalCode: a.cep,
+            address: a.street,
+            addressNumber: a.number,
+            complement: a.complement || undefined,
+            province: a.district,
+          }),
     });
 
     const due = new Date();
@@ -78,7 +110,7 @@ export async function POST(req: NextRequest) {
     const payment = await createPayment({
       customer: customer.id,
       value: totalValue,
-      description: description.slice(0, 500),
+      description,
       externalReference: ref,
       dueDate,
       callbackSuccessUrl: `${siteUrl(req)}/pedido/${ref}`,
@@ -88,8 +120,11 @@ export async function POST(req: NextRequest) {
       ref,
       paymentId: payment.id,
       invoiceUrl: payment.invoiceUrl,
+      subtotal,
+      shipping,
       total: totalValue,
       quantity: totalQty,
+      productionLabel: PRODUCTION_LABEL,
     });
   } catch (err: unknown) {
     if (err instanceof AsaasNotConfiguredError) {

@@ -1,7 +1,14 @@
 import { OrderForm } from "@/components/OrderForm";
 import { ProductGallery } from "@/components/ProductGallery";
 import { RRLogo } from "@/components/RRLogo";
-import { PRODUCT, UNIT_PRICE, STORE } from "@/lib/config";
+import { Countdown } from "@/components/Countdown";
+import {
+  PRODUCT,
+  UNIT_PRICE,
+  STORE,
+  FREE_SHIPPING_FROM,
+  PRODUCTION_LABEL,
+} from "@/lib/config";
 import { formatBRL } from "@/lib/format";
 
 export default function Home() {
@@ -24,6 +31,13 @@ export default function Home() {
         <div className="absolute -right-24 top-0 h-96 w-96 rounded-full bg-brasil-yellow/20 blur-3xl" />
 
         <div className="relative mx-auto max-w-6xl px-4 py-12 md:py-16">
+          <div className="mb-8 flex flex-col items-start gap-3 rounded-2xl bg-white/5 p-4 ring-1 ring-white/10 sm:flex-row sm:items-center sm:justify-between">
+            <div className="text-sm font-semibold text-white">
+              🔥 Pré-venda da Coleção Brasil Retrô —{" "}
+              <span className="text-brasil-yellow">peça até 15/06</span>
+            </div>
+            <Countdown />
+          </div>
           <div className="max-w-2xl">
             <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-brasil-yellow ring-1 ring-white/20">
               ★ {PRODUCT.collection}
@@ -55,7 +69,13 @@ export default function Home() {
                 <Check /> Infantil e adulto
               </li>
               <li className="flex items-center gap-2">
-                <Check /> Entrega no seu endereço
+                <Check /> Entrega em Itajaí ou retirada
+              </li>
+              <li className="flex items-center gap-2">
+                <Check /> Frete grátis acima de {formatBRL(FREE_SHIPPING_FROM)}
+              </li>
+              <li className="flex items-center gap-2">
+                <Check /> Pronto em {PRODUCTION_LABEL}
               </li>
               <li className="flex items-center gap-2">
                 <Check /> PIX, boleto ou cartão
@@ -81,12 +101,12 @@ export default function Home() {
             text="Listras verde e amarelo, número 10 e o brasão de estrelas."
           />
           <Feature
-            title="Vários tamanhos"
-            text="Do infantil (1 a 14) ao adulto (PP, P, M, G). Misture na mesma compra."
+            title="Entrega em Itajaí ou retirada"
+            text="Frete R$ 10 — grátis acima de R$ 100. Ou retire na loja sem custo."
           />
           <Feature
-            title="Pagamento facilitado"
-            text="Finalize com PIX, boleto ou cartão em ambiente seguro."
+            title="Pronto em 7 dias úteis"
+            text="Produção em até 7 dias úteis. Pague com PIX, boleto ou cartão."
           />
         </div>
       </section>
@@ -101,6 +121,11 @@ export default function Home() {
             <p className="mt-2 text-neutral-600">
               Preencha seus dados, escolha as quantidades por tamanho e finalize
               o pagamento.
+            </p>
+            <p className="mt-3 inline-flex flex-wrap items-center justify-center gap-x-3 gap-y-1 rounded-full bg-amber-50 px-4 py-2 text-sm font-semibold text-amber-800">
+              <span>⏳ Pedidos só até 15/06</span>
+              <span className="text-amber-300">•</span>
+              <span>🛠️ Pronto em {PRODUCTION_LABEL}</span>
             </p>
           </div>
 
