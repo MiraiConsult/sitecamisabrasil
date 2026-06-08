@@ -1,0 +1,40 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  @apply bg-neutral-50 font-sans text-neutral-900 antialiased;
+}
+
+@layer components {
+  .input {
+    @apply w-full rounded-xl border border-neutral-300 bg-white px-4 py-3 text-[15px] text-neutral-900 outline-none transition placeholder:text-neutral-400 focus:border-brasil-green focus:ring-2 focus:ring-brasil-green/30;
+  }
+
+  .label {
+    @apply mb-1.5 block text-sm font-semibold text-neutral-700;
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-brasil-green px-6 py-4 text-base font-bold text-white shadow-lg shadow-brasil-green/25 transition hover:bg-brasil-greenDark active:scale-[.99] disabled:cursor-not-allowed disabled:opacity-60;
+  }
+}
+
+/* Listras verticais verde/amarelo da Coleção Brasil Retrô */
+.stripes-brasil {
+  background-image: repeating-linear-gradient(
+    90deg,
+    #009c3b 0,
+    #009c3b 26px,
+    #ffdf00 26px,
+    #ffdf00 52px
+  );
+}
