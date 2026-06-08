@@ -9,9 +9,11 @@ import {
   PRODUCTION_LABEL,
   FREE_SHIPPING_FROM,
   SHIPPING_FEE,
+  FITS,
   computeShipping,
   isItajaiCep,
   isOrderingClosed,
+  type Fit,
 } from "@/lib/config";
 import {
   formatBRL,
@@ -36,6 +38,7 @@ export function OrderForm() {
   const [phone, setPhone] = useState("");
 
   const [method, setMethod] = useState<Method>("entrega");
+  const [fit, setFit] = useState<Fit>("masculina");
 
   const [cep, setCep] = useState("");
   const [street, setStreet] = useState("");
@@ -130,6 +133,7 @@ export function OrderForm() {
           email,
           cpfCnpj,
           phone,
+          fit,
           deliveryMethod: method,
           address:
             method === "entrega"
@@ -397,9 +401,24 @@ export function OrderForm() {
           3. Tamanhos e quantidade
         </legend>
         <p className="-mt-1 text-sm text-neutral-500">
-          Escolha quantas unidades de cada tamanho você quer. O total é somado
-          automaticamente.
+          Escolha a modelagem e quantas unidades de cada tamanho você quer. O
+          total é somado automaticamente.
         </p>
+
+        <div>
+          <h4 className="mb-2 font-bold text-neutral-800">Modelagem</h4>
+          <div className="grid grid-cols-2 gap-3">
+            {FITS.map((f) => (
+              <MethodButton
+                key={f.value}
+                active={fit === f.value}
+                onClick={() => setFit(f.value)}
+                title={f.label}
+                subtitle={f.hint}
+              />
+            ))}
+          </div>
+        </div>
 
         {SIZE_GROUPS.map((group) => (
           <div key={group.label}>

@@ -19,6 +19,7 @@ type Order = {
   entrega: string;
   tipo: string;
   frete: string;
+  modelagem: string;
   quantidade: string;
   tamanhos: string;
   descricao: string;
@@ -203,6 +204,11 @@ export default function AdminPage() {
                     <Td className="text-neutral-700">
                       <span className="font-semibold">{o.quantidade}un</span>{" "}
                       <span className="text-neutral-500">{o.tamanhos}</span>
+                      {o.modelagem && (
+                        <div className="text-xs text-neutral-400">
+                          {o.modelagem}
+                        </div>
+                      )}
                     </Td>
                     <Td className="max-w-[260px] text-xs text-neutral-600">
                       {o.tipo === "Retirada" ? (

@@ -32,8 +32,8 @@ export const SIZE_GROUPS: SizeGroup[] = [
   },
   {
     label: "Adulto",
-    hint: "Tamanhos PP ao G",
-    sizes: ["PP", "P", "M", "G"],
+    hint: "Tamanhos PP ao G1",
+    sizes: ["PP", "P", "M", "G", "GG", "G1"],
   },
 ];
 
@@ -85,3 +85,15 @@ export const PICKUP = {
 // Prazo de produção.
 export const PRODUCTION_DAYS = 7; // dias úteis
 export const PRODUCTION_LABEL = "7 dias úteis";
+
+// Modelagem (corte) da camiseta.
+export type Fit = "masculina" | "feminina";
+
+export const FITS: { value: Fit; label: string; hint: string }[] = [
+  { value: "masculina", label: "Masculina", hint: "Modelagem tradicional" },
+  { value: "feminina", label: "Feminina", hint: "Baby look" },
+];
+
+export function fitLabel(value: string): string {
+  return value === "feminina" ? "Feminina (baby look)" : "Masculina";
+}

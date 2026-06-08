@@ -7,6 +7,7 @@ import {
   computeShipping,
   isOrderingClosed,
   PRODUCTION_LABEL,
+  fitLabel,
 } from "@/lib/config";
 import { formatBRL } from "@/lib/format";
 import {
@@ -69,6 +70,7 @@ export async function POST(req: NextRequest) {
   const descParts = [
     `${PRODUCT.collection} - ${PRODUCT.name}`,
     `${totalQty} un (${breakdown})`,
+    `Modelagem: ${fitLabel(data.fit)}`,
     `Tipo: ${isPickup ? "Retirada" : "Entrega"}`,
     `Frete: ${freteLabel}`,
     `Cliente: ${data.name}`,

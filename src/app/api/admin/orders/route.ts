@@ -46,6 +46,7 @@ function parseDescription(desc: string) {
     entrega: find("Entrega:"),
     tipo: find("Tipo:"),
     frete: find("Frete:"),
+    modelagem: find("Modelagem:"),
     quantidade,
     tamanhos,
   };

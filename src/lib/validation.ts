@@ -41,6 +41,7 @@ export const checkoutSchema = z
       .string()
       .transform((v) => v.replace(/\D/g, ""))
       .refine((v) => v.length >= 10 && v.length <= 11, "Telefone inválido."),
+    fit: z.enum(["masculina", "feminina"]),
     deliveryMethod: z.enum(["entrega", "retirada"]),
     address: addressSchema.optional(),
     items: itemsSchema,
