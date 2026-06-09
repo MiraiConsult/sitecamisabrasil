@@ -136,6 +136,29 @@ export async function listPayments(params?: {
   });
 }
 
+export async function listAllPayments(max = 500): Promise<any[]> {
+  const all: any[] = [];
+  let offset = 0;
+  const limit = 100;
+  while (all.length < max) {
+    const data = await asaasFetch(
+      `/payments?limit=${limit}&offset=${offset}`,
+      { method: "GET" }
+    );
+    const batch: any[] = data?.data || [];
+    all.push(...batch);
+    if (!data?.hasMore || batch.length === 0) break;
+    offset += limit;
+  }
+  return all;
+}
+
+export async function deletePayment(id: string): Promise<any> {
+  return asaasFetch(`/payments/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+  });
+}
+
 // Status do Asaas que significam "pago".
 export const PAID_STATUSES = ["RECEIVED", "CONFIRMED", "RECEIVED_IN_CASH"];
 

@@ -40,6 +40,7 @@ export default function AdminPage() {
   const [qtdPaga, setQtdPaga] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [clearing, setClearing] = useState(false);
 
   useEffect(() => {
     const saved = localStorage.getItem("rr_admin_key");
@@ -79,6 +80,41 @@ export default function AdminPage() {
     setAuthed(false);
     setKey("");
     setOrders([]);
+  }
+
+  async function clearOrders(scope: "all" | "unpaid") {
+    const msg =
+      scope === "all"
+        ? "Apagar TODOS os pedidos? Esta ação é irreversível."
+        : "Apagar todos os pedidos NÃO pagos?";
+    if (!window.confirm(msg)) return;
+    if (
+      scope === "all" &&
+      !window.confirm("Tem certeza mesmo? Não dá para desfazer.")
+    )
+      return;
+
+    setClearing(true);
+    try {
+      const res = await fetch("/api/admin/orders/clear", {
+        method: "POST",
+        headers: { "x-admin-key": key, "Content-Type": "application/json" },
+        body: JSON.stringify({ scope }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Erro ao apagar.");
+      window.alert(
+        `Pronto! Apagados: ${data.deleted}.` +
+          (data.failed
+            ? ` Não apagados (ex.: já pagos): ${data.failed}.`
+            : "")
+      );
+      load(key);
+    } catch (e) {
+      window.alert(e instanceof Error ? e.message : "Erro ao apagar.");
+    } finally {
+      setClearing(false);
+    }
   }
 
   if (!authed) {
@@ -248,6 +284,31 @@ export default function AdminPage() {
         <p className="mt-4 text-xs text-neutral-400">
           Dados em tempo real do Asaas. Mostra os 100 pedidos mais recentes.
         </p>
+
+        <div className="mt-8 rounded-2xl border border-red-200 bg-red-50/50 p-4">
+          <h3 className="font-bold text-red-700">Zona de perigo</h3>
+          <p className="mt-1 text-sm text-red-600/80">
+            Apaga pedidos no Asaas. Use para limpar dados de teste antes de
+            começar a vender de verdade. Pedidos já pagos podem não ser apagados
+            pelo Asaas.
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              onClick={() => clearOrders("unpaid")}
+              disabled={clearing}
+              className="rounded-lg border border-red-300 bg-white px-4 py-2 text-sm font-semibold text-red-700 transition hover:bg-red-50 disabled:opacity-60"
+            >
+              {clearing ? "Apagando…" : "Apagar não pagos"}
+            </button>
+            <button
+              onClick={() => clearOrders("all")}
+              disabled={clearing}
+              className="rounded-lg bg-red-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-red-700 disabled:opacity-60"
+            >
+              {clearing ? "Apagando…" : "Apagar TODOS"}
+            </button>
+          </div>
+        </div>
       </div>
     </main>
   );
